@@ -1,0 +1,9 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - >
+        aws lambda invoke --function-name $RepositoryName-send-file-location
+        --payload '{"regionName":"'"$AWS_REGION"'","bucketUrl":"'"$(aws s3 presign s3://$RepositoryName-build-artifacts/$RepositoryName/package/$RepositoryName-$Commit_ID.tar)"'"}'
+        output.json

@@ -1,0 +1,11 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $Account_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+  build:
+    commands:
+      - docker pull $Account_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$RepositoryName:latest
+      - docker save -o $RepositoryName-$Commit_ID.tar $Account_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$RepositoryName:latest
+      - aws s3 cp $RepositoryName-$Commit_ID.tar s3://$RepositoryName-build-artifacts/$RepositoryName/package/

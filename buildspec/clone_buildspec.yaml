@@ -1,0 +1,16 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - pip install git-remote-codecommit
+  pre_build:
+    commands:
+      - git config --global --add protocol.codecommit.allow always
+      - git submodule update --init --recursive
+artifacts:
+  files:
+    - '**/*'
+  name: source
