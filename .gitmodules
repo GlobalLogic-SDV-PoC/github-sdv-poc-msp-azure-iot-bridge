@@ -1,0 +1,9 @@
+[submodule "dep/external/azure-iot-sdk-c"]
+	path = dep/external/azure-iot-sdk-c
+	url = https://github.com/Azure/azure-iot-sdk-c.git
+[submodule "dep/internal/iot"]
+	path = dep/internal/iot
+	url = codecommit::eu-west-1://msp-iot-bridge
+[submodule "dep/external/gtest"]
+	path = dep/external/gtest
+	url = https://github.com/google/googletest.git
