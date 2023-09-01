@@ -3,6 +3,8 @@
 #include <cassert>
 #include <regex>
 
+#include "ipc/common.hpp"
+
 namespace azure_iot
 {
 ClientIot::ClientIotImpl::ClientIotImpl(const std::string& conn_string, const on_received_handler& handler)
@@ -83,9 +85,11 @@ void ClientIot::ClientIotImpl::unsubscribe(std::string_view topic) { m_topicSet.
 
 void ClientIot::ClientIotImpl::publish(std::string_view topic, std::string_view payload)
 {
-    std::string message = "@" + std::string(topic) + "@" + std::to_string(payload.size()) + "@" + std::string(payload);
+    nlohmann::json msg;
+    msg["topic"] = topic;
+    msg["payload"] = payload;
 
-    sendIoTHubMessage(std::move(message), m_device_ll_handler.get());
+    sendIoTHubMessage(msg.dump(), m_device_ll_handler.get());
 }
 
 IOTHUBMESSAGE_DISPOSITION_RESULT ClientIot::ClientIotImpl::receiveMsgCallback(IOTHUB_MESSAGE_HANDLE message_handler,
