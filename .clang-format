@@ -1,0 +1,23 @@
+---
+AccessModifierOffset: -4
+AlignTrailingComments: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: true
+BasedOnStyle: Google
+BinPackParameters: false
+BreakBeforeBinaryOperators: true
+BreakBeforeBraces: Allman
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: true
+ColumnLimit: 0
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+DerivePointerBinding: false
+IndentCaseLabels: false
+IndentWidth: 4
+Language: Cpp
+ReflowComments: true
+SortIncludes: true
+SortUsingDeclarations: false
+SpacesInSquareBrackets: false
+Standard: c++17

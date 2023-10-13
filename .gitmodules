@@ -1,0 +1,3 @@
+[submodule "dep/external/azure"]
+	path = dep/external/azure
+	url = https://github.com/Azure/azure-iot-sdk-c.git

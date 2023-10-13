@@ -1,0 +1,52 @@
+version: 0.6.13
+
+# Whitespace settings
+indentation: "    "   # Indent with two spaces
+tab_size: 4         # Tabs should have the equivalent size of two spaces
+use_tab_characters: false  # Use spaces instead of tabs
+
+# Formatting options
+command_case: "unchanged"  # Do not change the case of keywords like "add_executable"
+keyword_case: "unchanged"  # Do not change the case of CMake keywords
+line_width: 80            # Maximum line width
+split_definitions: false   # Do not split long variable definitions across multiple lines
+split_arguments: true     # Do not split long function arguments across multiple lines
+trailing_commas: true      # Add trailing commas to lists and function arguments
+
+# Comment style
+comment: "#"  # Use "#" for comments
+
+# Macro settings
+define_macros: "CM_DEFINE"    # Define macros with prefix "CM_DEFINE"
+
+# Section order
+section_order:
+  - PROJECT
+  - PATHS
+  - OPTIONS
+  - TARGETS
+  - INSTALL
+
+# Custom order of the `set` command arguments
+set_command_args_order:
+  - CACHE
+  - PARENT_SCOPE
+  - FORCE
+  - APPEND
+
+# Custom order of the `add_library` command arguments
+add_library_args_order:
+  - NAME
+  - TYPE
+  - SOURCES
+
+# Custom order of the `add_executable` command arguments
+add_executable_args_order:
+  - NAME
+  - SOURCES
+
+# Custom order of the `add_test` command arguments
+add_test_args_order:
+  - NAME
+  - COMMAND
+  - SOURCES

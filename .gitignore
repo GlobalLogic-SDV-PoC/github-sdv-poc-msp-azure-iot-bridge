@@ -1,0 +1,29 @@
+# Ignore build artifacts
+build/
+bin/
+obj/
+*.o
+*.a
+*.so
+
+# Ignore generated files
+Makefile
+CMakeLists.txt.user
+CMakeCache.txt
+compile_commands.json
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.suo
+*.user
+*.ncb
+*.aps
+*.opendb
+*.opensdf
+*.sdf
+*.VC.db
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
