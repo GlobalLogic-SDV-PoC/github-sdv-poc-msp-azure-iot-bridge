@@ -1,20 +1,14 @@
 #pragma once
 
-#include <cassert>
 #include <iotb/client_iot.hpp>
 #include <iotb/context.hpp>
 #include <memory>
 #include <unordered_set>
 
-#include "azure_c_shared_utility/crt_abstractions.h"
-#include "azure_c_shared_utility/shared_util_options.h"
-#include "azure_c_shared_utility/threadapi.h"
+
 #include "azure_iot/client_iot.hpp"
-#include "iothub.h"
-#include "iothub_client_options.h"
 #include "iothub_device_client_ll.h"
 #include "iothub_message.h"
-#include "iothubtransportmqtt.h"
 
 namespace azure_iot
 {
