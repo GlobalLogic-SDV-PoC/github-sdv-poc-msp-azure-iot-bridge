@@ -24,12 +24,12 @@ class AzureClientIotImpl
     using DeviceHandler = std::unique_ptr<IOTHUB_CLIENT_CORE_LL_HANDLE_DATA_TAG, decltype(&IoTHubDeviceClient_LL_Destroy)>;
 
 public:
-    AzureClientIotImpl(const std::string& conn_string, const std::shared_ptr<iotb::Context>& ctx, const onReceivedHandler& handler);
+    AzureClientIotImpl(std::string conn_string, const std::shared_ptr<iotb::Context>& ctx, const onReceivedHandler& handler);
 
     ~AzureClientIotImpl();
-    void subscribe(iotb::Span topic);
-    void unsubscribe(iotb::Span topic);
-    void publish(iotb::Span topic, iotb::Span payload);
+    void subscribe(std::string topic);
+    void unsubscribe(std::string topic);
+    void publish(std::string topic, std::string payload);
 
 protected:
     // A receiving from IoTHub message (C2D) callback wrapper

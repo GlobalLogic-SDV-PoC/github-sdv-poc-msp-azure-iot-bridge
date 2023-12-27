@@ -1,3 +1,6 @@
-[submodule "dep/external/azure"]
-	path = dep/external/azure
+[submodule "github-sdv-poc-msp-iot-bridge"]
+	path = github-sdv-poc-msp-iot-bridge
+	url = git@github.com:GlobalLogic-SDV-PoC/github-sdv-poc-msp-iot-bridge.git
+[submodule "azure_iot/dep/external/azure"]
+	path = azure_iot/dep/external/azure
 	url = https://github.com/Azure/azure-iot-sdk-c.git

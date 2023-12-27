@@ -4,11 +4,15 @@
 #include <rclcpp/logging.hpp>
 #include <regex>
 
+#include "azure_c_shared_utility/threadapi.h"
 #include "azure_iot/client_iot_impl.hpp"
+#include "iothub.h"
+#include "iothub_client_options.h"
+#include "iothubtransportmqtt.h"
 
 namespace azure_iot
 {
-AzureClientIotImpl::AzureClientIotImpl(const std::string& conn_string, const std::shared_ptr<iotb::Context>& ctx, const onReceivedHandler& handler)
+AzureClientIotImpl::AzureClientIotImpl(std::string conn_string, const std::shared_ptr<iotb::Context>& ctx, const onReceivedHandler& handler)
     : m_ctx(ctx)
     , m_conn_string(conn_string)
     , m_on_received_handler(handler)
@@ -84,13 +88,13 @@ AzureClientIotImpl::~AzureClientIotImpl()
     IoTHub_Deinit();
 }
 
-void AzureClientIotImpl::subscribe(iotb::Span topic) { m_topicSet.emplace(static_cast<const char*>(topic.buf), topic.len); }
+void AzureClientIotImpl::subscribe(std::string topic) { m_topicSet.insert(std::move(topic)); }
 
-void AzureClientIotImpl::unsubscribe(iotb::Span topic) { m_topicSet.erase(std::string(static_cast<const char*>(topic.buf), topic.len)); }
+void AzureClientIotImpl::unsubscribe(std::string topic) { m_topicSet.erase(topic); }
 
-void AzureClientIotImpl::publish(iotb::Span topic, iotb::Span payload)
+void AzureClientIotImpl::publish(std::string topic, std::string payload)
 {
-    std::string message = "@" + std::string(static_cast<const char*>(topic.buf), topic.len) + "@" + std::to_string(payload.len) + "@" + std::string(std::string(static_cast<const char*>(payload.buf), payload.len));
+    std::string message = "@" + topic + "@" + std::to_string(payload.size()) + "@" + payload;
 
     sendIoTHubMessage(std::move(message), m_device_ll_handler.get());
 }
@@ -147,10 +151,7 @@ IOTHUBMESSAGE_DISPOSITION_RESULT AzureClientIotImpl::receiveMsgCallback(IOTHUB_M
         RCLCPP_ERROR(m_ctx->node->get_logger(), "Failure retrieving message");
         return IOTHUBMESSAGE_REJECTED;
     }
-    // TODO: fix this memory disaster
-    // Create the string from the byte array message
     std::string message(static_cast<const char*>(static_cast<const void*>(buffmsg)), bufflen);
-    // TODO: (Andrew) what the actual fuck is this regex parsing
     const std::regex messageformat("@([a-zA-Z\\-_/0-9]+)@([0-9]+)@(.*)");
     std::smatch messageparts;
 
@@ -171,7 +172,7 @@ IOTHUBMESSAGE_DISPOSITION_RESULT AzureClientIotImpl::receiveMsgCallback(IOTHUB_M
     }
 
     // Send the topic and payload to ipc
-    m_on_received_handler({topic_name.data(), topic_name.size()}, {payload.data(), payload.size()});
+    m_on_received_handler(topic_name, payload);
 
     // Returning IOTHUBMESSAGE_ACCEPTED causes the SDK to acknowledge receipt of
     // the message to the service.  The application does not need to take

@@ -15,16 +15,16 @@ void AzureClientIot::disconnect()
 {
     m_impl.reset();
 }
-void AzureClientIot::subscribe(iotb::Span topic)
+void AzureClientIot::subscribe(std::string topic)
 {
-    m_impl->subscribe(topic);
+    m_impl->subscribe(std::move(topic));
 }
-void AzureClientIot::unsubscribe(iotb::Span topic)
+void AzureClientIot::unsubscribe(std::string topic)
 {
-    m_impl->unsubscribe(topic);
+    m_impl->unsubscribe(std::move(topic));
 }
-void AzureClientIot::publish(iotb::Span topic, iotb::Span payload)
+void AzureClientIot::publish(std::string topic, std::string payload)
 {
-    m_impl->publish(topic, payload);
+    m_impl->publish(std::move(topic), std::move(payload));
 }
-}  // namespace aws_iot
+}  // namespace azure_iot
