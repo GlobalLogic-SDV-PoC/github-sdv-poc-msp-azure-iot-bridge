@@ -1,9 +1,8 @@
 #include "client_iot_impl.hpp"
 
 #include <cassert>
+#include <cstring>
 #include <regex>
-
-#include "ipc/common.hpp"
 
 namespace azure_iot
 {
@@ -85,11 +84,9 @@ void ClientIot::ClientIotImpl::unsubscribe(std::string_view topic) { m_topicSet.
 
 void ClientIot::ClientIotImpl::publish(std::string_view topic, std::string_view payload)
 {
-    nlohmann::json msg;
-    msg["topic"] = topic;
-    msg["payload"] = payload;
+    std::string message = "@" + std::string(topic) + "@" + std::to_string(payload.size()) + "@" + std::string(payload);
 
-    sendIoTHubMessage(msg.dump(), m_device_ll_handler.get());
+    sendIoTHubMessage(std::move(message), m_device_ll_handler.get());
 }
 
 IOTHUBMESSAGE_DISPOSITION_RESULT ClientIot::ClientIotImpl::receiveMsgCallback(IOTHUB_MESSAGE_HANDLE message_handler,
@@ -146,13 +143,42 @@ IOTHUBMESSAGE_DISPOSITION_RESULT ClientIot::ClientIotImpl::receiveMsgCallback(IO
     }
 
     // Create the string from the byte array message
-    std::string message(reinterpret_cast<const char*>(buffmsg), bufflen);
-    if (message.empty())
+    /*std::string message(reinterpret_cast<const char*>(buffmsg), bufflen);*/
+    const void* voidPtr = static_cast<const void*>(buffmsg);
+    char* message = const_cast<char*>(static_cast<const char*>(voidPtr));
+
+    // char message[bufflen + 1];
+    // std::memcpy(message, buffmsg, bufflen);
+    // message[bufflen] = 0;
+
+    if (message[0] == '\0')
     {
         SPDLOG_DEBUG("[iotb][azure_iot] Can't convert a message");
         return IOTHUBMESSAGE_REJECTED;
     }
 
+    const char delimiter = '@';
+    char* token = strtok(message, &delimiter);
+    size_t delimiter_count = 0;
+    std::vector<const char*> tokens;
+
+    while (token != nullptr)
+    {
+        tokens.push_back(token);
+        token = strtok(nullptr, &delimiter);
+        delimiter_count++;
+    }
+
+    if (delimiter_count != 3)
+    {
+        SPDLOG_DEBUG("[iotb][azure_iot] Wrong message format");
+        return IOTHUBMESSAGE_REJECTED;
+    }
+
+    const std::string& topic_name = tokens[0];
+    const std::string& payload = tokens[2];
+
+    /*
     const std::regex messageformat("@([a-zA-Z\\-_/0-9]+)@([0-9]+)@(.*)");
     std::smatch messageparts;
 
@@ -161,17 +187,29 @@ IOTHUBMESSAGE_DISPOSITION_RESULT ClientIot::ClientIotImpl::receiveMsgCallback(IO
         SPDLOG_DEBUG("[iotb][azure_iot] Wrong message format");
         return IOTHUBMESSAGE_REJECTED;
     }
+    */
 
-    const std::string& topic_name = messageparts[1];
-    const std::string& payload = messageparts[3];
+    // const std::string& topic_name = messageparts[1];
+    // const std::string& payload = messageparts[3];
 
     // If the topic is not found in a set of receiving topics, the message is broken.
-    if (m_topicSet.find(topic_name) == m_topicSet.end())
+    if (m_topicSet.find(topic_name) != m_topicSet.end())
+    {
+        for (std::set<std::string>::iterator it = m_topicSet.begin(); it != m_topicSet.end(); ++it)
+        {
+            if (areWildcardsMatched(*it, topic_name))
+            {
+                subscribe(topic_name);
+                break;
+            }
+        }
+    }
+    else
     {
         SPDLOG_DEBUG("[iotb][azure_iot] No registered topic to send");
         return IOTHUBMESSAGE_REJECTED;
     }
-
+    
     // Send the topic and payload to ipc
     m_on_received_handler(topic_name, payload);
 
@@ -272,4 +310,35 @@ void ClientIot::ClientIotImpl::stop()
     // Free all the sdk subsystem
     IoTHub_Deinit();
 }
+
+bool ClientIot::ClientIotImpl::areWildcardsMatched(std::string_view first, std::string_view second)
+{
+    for (auto it1 = first.begin(), it2 = second.begin(); it1 != first.end() || it2 != second.end();)
+    {
+        if (*it1 == *it2)
+        {
+            it1++, it2++;
+        }
+        else if (*it1 == '#' || *it2 == '#')
+        {
+            return true;
+        }
+        else if (*it1 == '+')
+        {
+            it2 = std::find(it2, second.end(), '/');
+            it1++;
+        }
+        else if (*it2 == '+')
+        {
+            it1 = std::find(it1, first.end(), '/');
+            it2++;
+        }
+        else 
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 }  // namespace azure_iot

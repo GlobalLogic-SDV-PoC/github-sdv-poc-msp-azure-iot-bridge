@@ -98,6 +98,9 @@ private:
     // A method to stop the communication process with an IoTHub
     // and to destroy the IoTHub instance
     void stop();
+
+    bool areWildcardsMatched(std::string_view first, std::string_view second);
+
 };
 
 }  // namespace azure_iot
