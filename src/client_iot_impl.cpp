@@ -1,8 +1,13 @@
 #include "client_iot_impl.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstring>
+#include <iterator>
 #include <regex>
+
+#include "spdlog/spdlog.h"
 
 namespace azure_iot
 {
@@ -142,81 +147,102 @@ IOTHUBMESSAGE_DISPOSITION_RESULT ClientIot::ClientIotImpl::receiveMsgCallback(IO
         return IOTHUBMESSAGE_REJECTED;
     }
 
-    // Create the string from the byte array message
-    /*std::string message(reinterpret_cast<const char*>(buffmsg), bufflen);*/
-    const void* voidPtr = static_cast<const void*>(buffmsg);
-    char* message = const_cast<char*>(static_cast<const char*>(voidPtr));
+    const size_t MAX_MESSAGE = 512;
+    const char delimiter = '@';
 
-    // char message[bufflen + 1];
-    // std::memcpy(message, buffmsg, bufflen);
-    // message[bufflen] = 0;
-
-    if (message[0] == '\0')
+    // Check whether the message is read well and is not bigger than 4 kbytes
+    if (buffmsg[0] == '\0' || buffmsg[0] != delimiter || bufflen > MAX_MESSAGE)
     {
         SPDLOG_DEBUG("[iotb][azure_iot] Can't convert a message");
         return IOTHUBMESSAGE_REJECTED;
     }
 
-    const char delimiter = '@';
-    char* token = strtok(message, &delimiter);
-    size_t delimiter_count = 0;
-    std::vector<const char*> tokens;
+    // Count the delimiters in message
+    size_t delimiter_count = 1;
 
-    while (token != nullptr)
+    for (size_t i = 1; i < bufflen; i++)
     {
-        tokens.push_back(token);
-        token = strtok(nullptr, &delimiter);
-        delimiter_count++;
+        if (buffmsg[i] == delimiter)
+        {
+            delimiter_count++;
+        }
     }
 
+    // Check whether the delimiters count is correct
     if (delimiter_count != 3)
     {
         SPDLOG_DEBUG("[iotb][azure_iot] Wrong message format");
         return IOTHUBMESSAGE_REJECTED;
     }
 
-    const std::string& topic_name = tokens[0];
-    const std::string& payload = tokens[2];
+    // Topic name, payload size and payload tokenizing
+    // By using the delimiter and idx
+    // to keep the delimiter position to divide after
+    size_t idx = 0;
+    size_t payload_size = 0;
+    std::string topic_name;
+    std::string payload;
 
-    /*
-    const std::regex messageformat("@([a-zA-Z\\-_/0-9]+)@([0-9]+)@(.*)");
-    std::smatch messageparts;
-
-    if (!std::regex_match(message, messageparts, messageformat) || messageparts.size() != 4)
+    // Divide the topic name and save after the second delimiter idx
+    for (size_t i = 1; i < bufflen; i++)
     {
-        SPDLOG_DEBUG("[iotb][azure_iot] Wrong message format");
-        return IOTHUBMESSAGE_REJECTED;
+        if (buffmsg[i] != delimiter)
+        {
+            topic_name += buffmsg[i];
+        }
+        else
+        {
+            idx = i + 1;
+            break;
+        }
     }
-    */
 
-    // const std::string& topic_name = messageparts[1];
-    // const std::string& payload = messageparts[3];
+    // Parse the payload size to value and save after the third delimiter idx
+    for (size_t i = idx; i < bufflen; i++)
+    {
+        if (buffmsg[i] != delimiter)
+        {
+            payload_size = payload_size * 10 + (buffmsg[i] - '0');
+        }
+        else
+        {
+            idx = i + 1;
+            break;
+        }
+    }
+
+    // Copy the payload message part correctly after the third (last) delimiter
+    payload.reserve(payload_size);
+    std::copy(buffmsg + idx, buffmsg + idx + payload_size, std::back_inserter(payload));
 
     // If the topic is not found in a set of receiving topics, the message is broken.
     if (m_topicSet.find(topic_name) != m_topicSet.end())
     {
-        for (std::set<std::string>::iterator it = m_topicSet.begin(); it != m_topicSet.end(); ++it)
+        // Send the topic and payload to ipc
+        m_on_received_handler(topic_name, payload);
+
+        // Returning IOTHUBMESSAGE_ACCEPTED causes the SDK to acknowledge receipt of
+        // the message to the service.  The application does not need to take
+        // further action tstatico ACK at this point.
+        return IOTHUBMESSAGE_ACCEPTED;
+    }
+
+    for (auto it = m_topicSet.begin(); it != m_topicSet.end(); ++it)
+    {
+        if (areWildcardsMatched(*it, topic_name))
         {
-            if (areWildcardsMatched(*it, topic_name))
-            {
-                subscribe(topic_name);
-                break;
-            }
+            // Send the topic and payload to ipc
+            m_on_received_handler(topic_name, payload);
+
+            // Returning IOTHUBMESSAGE_ACCEPTED causes the SDK to acknowledge receipt of
+            // the message to the service.  The application does not need to take
+            // further action tstatico ACK at this point.
+            return IOTHUBMESSAGE_ACCEPTED;
         }
     }
-    else
-    {
-        SPDLOG_DEBUG("[iotb][azure_iot] No registered topic to send");
-        return IOTHUBMESSAGE_REJECTED;
-    }
-    
-    // Send the topic and payload to ipc
-    m_on_received_handler(topic_name, payload);
 
-    // Returning IOTHUBMESSAGE_ACCEPTED causes the SDK to acknowledge receipt of
-    // the message to the service.  The application does not need to take
-    // further action tstatico ACK at this point.
-    return IOTHUBMESSAGE_ACCEPTED;
+    SPDLOG_DEBUG("[iotb][azure_iot] No registered topic to send");
+    return IOTHUBMESSAGE_REJECTED;
 }
 
 void ClientIot::ClientIotImpl::sendConfirmCallback(IOTHUB_CLIENT_CONFIRMATION_RESULT result)
@@ -333,7 +359,7 @@ bool ClientIot::ClientIotImpl::areWildcardsMatched(std::string_view first, std::
             it1 = std::find(it1, first.end(), '/');
             it2++;
         }
-        else 
+        else
         {
             return false;
         }
